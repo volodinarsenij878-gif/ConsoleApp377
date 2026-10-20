@@ -1,0 +1,167 @@
+    ﻿using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+    using System.Threading.Tasks;
+
+    namespace Program12
+    {
+    internal class Program
+    {
+        public class NuclearReactorCore
+        {
+            // Поля (инкапсулированное состояние)
+            private double _thermalPowerMw;          // тепловая мощность (МВт)
+            private int _absorberRodsPositionPercent; // положение стержней поглотителя (%)
+            private double _coolantTemperatureC;     // температура теплоносителя (°C)
+            private double _loopPressureAtm;         // давление в контуре (атм)
+
+            // Свойство: положение стержней (0–100%) с валидацией
+            public int RodsPositionPercent
+            {
+                get => _absorberRodsPositionPercent;
+                set
+                {
+                    if (value < 0 || value > 100)
+                        throw new ArgumentOutOfRangeException(nameof(value), "Положение стержней должно быть в диапазоне 0–100%.");
+                    _absorberRodsPositionPercent = value;
+                }
+            }
+
+            // Свойство: давление в контуре (0–200 атм) с валидацией
+            public double LoopPressureAtm
+            {
+                get => _loopPressureAtm;
+                set
+                {
+                    if (value < 0 || value > 200)
+                        throw new ArgumentOutOfRangeException(nameof(value), "Давление должно быть в диапазоне 0–200 атм.");
+                    _loopPressureAtm = value;
+                }
+            }
+
+            // Свойства без строгой валидации (можно добавить при необходимости)
+            public double ThermalPowerMw
+            {
+                get => _thermalPowerMw;
+                set => _thermalPowerMw = value;
+            }
+
+            public double CoolantTemperatureC
+            {
+                get => _coolantTemperatureC;
+                set => _coolantTemperatureC = value;
+            }
+
+            // Вычисляемое свойство только для чтения: требуется ли SCRAM (аварийная остановка)
+            public bool ScramRequired => _coolantTemperatureC > 330.0;
+
+            // Конструктор (инициализация объекта)
+            public NuclearReactorCore(double thermalPowerMw, int rodsPositionPercent, double coolantTemperatureC, double loopPressureAtm)
+            {
+                ThermalPowerMw = thermalPowerMw;
+                RodsPositionPercent = rodsPositionPercent;
+                CoolantTemperatureC = coolantTemperatureC;
+                LoopPressureAtm = loopPressureAtm;
+            }
+
+            // Метод: опустить стержни на percent процентов (не ниже 0%)
+            public void LowerRods(int percent)
+            {
+                if (percent < 0)
+                    throw new ArgumentException("Процент опускания не может быть отрицательным.", nameof(percent));
+
+                int newPosition = _absorberRodsPositionPercent - percent;
+                _absorberRodsPositionPercent = Math.Max(0, newPosition);
+            }
+
+            // Метод: поднять стержни на percent процентов (не выше 100%)
+            public void RaiseRods(int percent)
+            {
+                if (percent < 0)
+                    throw new ArgumentException("Процент поднятия не может быть отрицательным.", nameof(percent));
+
+                int newPosition = _absorberRodsPositionPercent + percent;
+                _absorberRodsPositionPercent = Math.Min(100, newPosition);
+            }
+
+            // Метод: вывод статуса реактора
+            public void PrintStatus(string blockName)
+            {
+                Console.WriteLine($"--- Статус энергоблока {blockName} ---");
+                Console.WriteLine($"Тепловая мощность: {_thermalPowerMw:F1} МВт");
+                Console.WriteLine($"Положение стержней: {_absorberRodsPositionPercent}%");
+                Console.WriteLine($"Температура теплоносителя: {_coolantTemperatureC:F1} °C");
+                Console.WriteLine($"Давление в контуре: {_loopPressureAtm:F1} атм");
+                Console.WriteLine($"Требуется SCRAM: {(ScramRequired ? "ДА" : "НЕТ")}");
+                Console.WriteLine("----------------------------------");
+            }
+        }
+
+          
+            static void Main ()
+            { 
+                // Создаём 3 объекта (энергоблока) с разными начальными параметрами
+                var block1 = new NuclearReactorCore(3000, 50, 310, 150);
+                var block2 = new NuclearReactorCore(2800, 45, 325, 145);
+                var block3 = new NuclearReactorCore(3200, 55, 335, 160);
+
+                Console.WriteLine("=== Моделирование изменения нагрузки в энергосети для 3 энергоблоков АЭС ===\n");
+
+                // Сценарий 1: рост нагрузки — повышаем мощность, температура растёт условно пропорционально
+                Console.WriteLine("[Сценарий 1] Рост нагрузки: повышение мощности на 10%...\n");
+                ApplyLoadIncrease(block1, 10);
+                ApplyLoadIncrease(block2, 10);
+                ApplyLoadIncrease(block3, 10);
+
+                block1.PrintStatus("Блок 1");
+                block2.PrintStatus("Блок 2");
+                block3.PrintStatus("Блок 3");
+
+                // Сценарий 2: перегрев на Блоке 3 — опускаем стержни, снижаем мощность и температуру
+                Console.WriteLine("[Сценарий 2] Перегрев на Блоке 3: опускаем стержни на 20%...\n");
+                block3.LowerRods(20);
+                block3.ThermalPowerMw *= 0.8;           // условно: -20% мощности
+                block3.CoolantTemperatureC -= 18;        // условно: снижение температуры
+
+                block3.PrintStatus("Блок 3 (после коррекции)");
+
+                // Сценарий 3: падение нагрузки — поднимаем стержни и снижаем мощность
+                Console.WriteLine("[Сценарий 3] Падение нагрузки: поднимаем стержни и снижаем мощность на 15%...\n");
+                block1.RaiseRods(15);
+                block1.ThermalPowerMw *= 0.85;
+                block1.CoolantTemperatureC -= 7;
+
+                block2.RaiseRods(10);
+                block2.ThermalPowerMw *= 0.85;
+                block2.CoolantTemperatureC -= 7;
+
+                block1.PrintStatus("Блок 1 (после снижения нагрузки)");
+                block2.PrintStatus("Блок 2 (после снижения нагрузки)");
+
+                // Финальная проверка: требуется ли SCRAM
+                Console.WriteLine("\n=== Итоговая проверка требований SCRAM ===");
+                CheckScram(block1, "Блок 1");
+                CheckScram(block2, "Блок 2");
+                CheckScram(block3, "Блок 3");
+            }
+
+            // Вспомогательный метод: моделирование роста нагрузки (в процентах)
+            static void ApplyLoadIncrease(NuclearReactorCore reactor, double percentIncrease)
+            {
+                double factor = 1.0 + percentIncrease / 100.0;
+                reactor.ThermalPowerMw *= factor;
+                // Условно: +0.6 °C на каждый 1% роста мощности
+                reactor.CoolantTemperatureC += (percentIncrease * 0.6);
+            }
+
+            // Вспомогательный метод: проверка и вывод статуса SCRAM
+            static void CheckScram(NuclearReactorCore reactor, string blockName)
+            {
+                if (reactor.ScramRequired)
+                    Console.WriteLine($"{blockName}: ТРЕБУЕТСЯ SCRAM (температура > 330 °C)!");
+                else
+                    Console.WriteLine($"{blockName}: SCRAM не требуется.");
+            }
+        }
+        }
